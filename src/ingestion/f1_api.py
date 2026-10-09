@@ -1,10 +1,14 @@
-import requests
+from datetime import date
 import pandas as pd
+import requests
 
 URL_BASE = "https://api.jolpi.ca/ergast/f1"
 
 def get_classement_pilotes(saison: int) -> pd.DataFrame:
     """Retourne le classement pilotes d'une saison sous forme de dataframe."""
+    if not isinstance(saison, int) or not 1950 <= saison <= date.today().year:
+        raise ValueError(f"Saison invalide : {saison}")
+
     url = f"{URL_BASE}/{saison}/driverstandings/"
 
     try:
@@ -38,5 +42,4 @@ def get_classement_pilotes(saison: int) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    df = get_classement_pilotes(2025)
-    print(df.head())
+    print(get_classement_pilotes(2025).head())
