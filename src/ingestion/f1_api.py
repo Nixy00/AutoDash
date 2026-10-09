@@ -3,43 +3,63 @@ import pandas as pd
 import requests
 
 URL_BASE = "https://api.jolpi.ca/ergast/f1"
+LIMITE = 100
 
-def get_classement_pilotes(saison: int) -> pd.DataFrame:
-    """Retourne le classement pilotes d'une saison sous forme de dataframe."""
+def _valider_saison(saison: int) -> None:
     if not isinstance(saison, int) or not 1950 <= saison <= date.today().year:
         raise ValueError(f"Saison invalide : {saison}")
 
-    url = f"{URL_BASE}/{saison}/driverstandings/"
 
+def _recuperer_courses(url: str) -> list:
+    """Parcourt toutes les pages de l'API et renvoie la liste des courses."""
+    courses = []
+    offset = 0
+    while True:
+        reponse = requests.get(
+            url, params={"limit": LIMITE, "offset": offset}, timeout=10
+        )
+        reponse.raise_for_status()
+        mrdata = reponse.json()["MRData"]
+        courses.extend(mrdata["RaceTable"]["Races"])
+        offset += LIMITE
+        if offset >= int(mrdata["total"]):
+            break
+    return courses
+
+
+def _aplatir(courses: list, cle: str, type_course: str) -> list:
+    """Transforme les courses imbriquées en une ligne par pilote et par course."""
+    lignes = []
+    for course in courses:
+        for r in course.get(cle, []):
+            position = r.get("position")
+            lignes.append({
+                "manche": int(course["round"]),
+                "course": course["raceName"],
+                "type": type_course,
+                "driver_id": r["Driver"]["driverId"],
+                "pilote": f"{r['Driver']['givenName']} {r['Driver']['familyName']}",
+                "ecurie": r["Constructor"]["name"],
+                "position_arrivee": int(position) if position else None,
+                "points": float(r.get("points", 0)),
+            })
+    return lignes
+
+
+def get_resultats_saison(saison: int) -> pd.DataFrame:
+    """Une ligne par pilote et par course (course principale + sprints)."""
+    _valider_saison(saison)
     try:
-        reponse = requests.get(url, timeout=10)
+        courses = _recuperer_courses(f"{URL_BASE}/{saison}/results/")
+        sprints = _recuperer_courses(f"{URL_BASE}/{saison}/sprint/")
     except requests.RequestException as erreur:
         print(f"Erreur réseau : {erreur}")
         return pd.DataFrame()
 
-    if reponse.status_code != 200:
-        print(f"Erreur lors de la requête : {reponse.status_code}")
-        return pd.DataFrame()
-
-    data = reponse.json()
-    listes = data["MRData"]["StandingsTable"]["StandingsLists"]
-
-    if not listes:
-        return pd.DataFrame()
-
-    lignes = []
-    for pilote in listes[0]["DriverStandings"]:
-        ecuries = " / ".join(c["name"] for c in pilote["Constructors"])
-        lignes.append({
-            "position": int(pilote["position"]),
-            "pilote": f"{pilote['Driver']['givenName']} {pilote['Driver']['familyName']}",
-            "points": float(pilote["points"]),
-            "victoires": int(pilote["wins"]),
-            "ecurie": ecuries,
-        })
-
+    lignes = _aplatir(courses, "Results", "Course")
+    lignes += _aplatir(sprints, "SprintResults", "Sprint")
     return pd.DataFrame(lignes)
 
 
 if __name__ == "__main__":
-    print(get_classement_pilotes(2025).head())
+    print(get_resultats_saison(2025).head())
