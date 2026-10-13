@@ -1,7 +1,12 @@
 import plotly.express as px
 import streamlit as st
 
-from src.analysis.standings import constructor_standings, driver_standings
+from src.analysis.standings import (
+    constructor_standings,
+    cumulative_points,
+    driver_standings,
+    driver_stats,
+)
 from src.ingestion.f1_api import get_season_results
 
 TEAM_COLORS = {
@@ -23,6 +28,8 @@ LABELS = {
     "team": "Écurie",
     "points": "Points",
     "wins": "Victoires",
+    "round": "Manche",
+    "cumulative_points": "Points cumulés",
 }
 
 st.set_page_config(page_title="AutoDash", layout="wide")
@@ -44,7 +51,7 @@ if results.empty:
 drivers = driver_standings(results)
 teams = constructor_standings(results, season)
 
-drivers_tab, teams_tab = st.tabs(["Pilotes", "Constructeurs"])
+drivers_tab, teams_tab, profile_tab = st.tabs(["Pilotes", "Constructeurs", "Fiche pilote"])
 
 with drivers_tab:
     fig = px.bar(
@@ -66,3 +73,40 @@ with teams_tab:
         )
         st.plotly_chart(fig, use_container_width=True)
         st.dataframe(teams.rename(columns=LABELS), hide_index=True)
+
+with profile_tab:
+    driver_list = drivers["driver"].tolist()
+    selected = st.multiselect(
+        "Pilotes à comparer",
+        options=driver_list,
+        default=driver_list[:2],
+    )
+
+    if not selected:
+        st.info("Choisis au moins un pilote.")
+    else:
+        progress = cumulative_points(results)
+        progress = progress[progress["driver"].isin(selected)]
+
+        fig = px.line(
+            progress, x="round", y="cumulative_points", color="driver",
+            markers=True, labels=LABELS,
+            title=f"Évolution des points, saison {season}",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        for name in selected:
+            stats = driver_stats(results, name)
+            if not stats:
+                continue
+
+            st.subheader(name)
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
+            col1.metric("Courses", stats["races"])
+            col2.metric("Points", f"{stats['points']:g}")
+            col3.metric("Victoires", stats["wins"])
+            col4.metric("Podiums", stats["podiums"])
+
+            best = stats["best_position"]
+            col5.metric("Meilleure place", best if best is not None else "-")
+            col6.metric("Abandons", stats["retirements"])
