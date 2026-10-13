@@ -2,13 +2,19 @@ from datetime import date
 import plotly.express as px
 import streamlit as st
 
+from src.analysis.simulation import max_points_left, remaining_events, title_contenders
 from src.analysis.standings import (
+    apply_official_points,
     constructor_standings,
     cumulative_points,
     driver_standings,
     driver_stats,
 )
-from src.ingestion.f1_api import get_season_calendar, get_season_results
+from src.ingestion.f1_api import (
+    get_official_driver_standings,
+    get_season_calendar,
+    get_season_results,
+)
 
 TEAM_COLORS = {
     "Ferrari": "#E8002D",
@@ -31,6 +37,9 @@ LABELS = {
     "wins": "Victoires",
     "round": "Manche",
     "cumulative_points": "Points cumulés",
+    "gap": "Écart au leader",
+    "max_possible": "Maximum atteignable",
+    "can_win": "Encore en course",
 }
 
 CURRENT_YEAR = date.today().year
@@ -46,6 +55,12 @@ def load_results(season: int):
 @st.cache_data(ttl=3600)
 def load_calendar(season: int):
     return get_season_calendar(season)
+
+
+@st.cache_data(ttl=3600)
+def load_official_standings(season: int):
+    return get_official_driver_standings(season)
+
 
 season = st.sidebar.selectbox("Saison", range(CURRENT_YEAR, 1949, -1))
 results = load_results(season)
@@ -77,10 +92,13 @@ elif last_round < total_rounds:
 else:
     st.caption(f"Saison terminée : {total_rounds} manches.")
 
-drivers = driver_standings(results)
+official = load_official_standings(season)
+drivers = apply_official_points(driver_standings(results), official)
 teams = constructor_standings(results, season)
 
-drivers_tab, teams_tab, profile_tab = st.tabs(["Pilotes", "Constructeurs", "Fiche pilote"])
+drivers_tab, teams_tab, profile_tab, simulation_tab = st.tabs(
+    ["Pilotes", "Constructeurs", "Fiche pilote", "Simulation"]
+)
 
 with drivers_tab:
     fig = px.bar(
@@ -89,7 +107,7 @@ with drivers_tab:
         title=f"Points par pilote, saison {season}",
     )
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(drivers.rename(columns=LABELS), hide_index=True)
+    st.dataframe(drivers.drop(columns="driver_id").rename(columns=LABELS), hide_index=True)
 
 with teams_tab:
     if teams.empty:
@@ -139,3 +157,42 @@ with profile_tab:
             best = stats["best_position"]
             col5.metric("Meilleure place", best if best is not None else "-")
             col6.metric("Abandons", stats["retirements"])
+
+with simulation_tab:
+    if season != CURRENT_YEAR or calendar.empty:
+        st.info("La simulation est disponible uniquement pour la saison en cours.")
+    else:
+        races_left, sprints_left = remaining_events(results, calendar)
+        max_left = max_points_left(races_left, sprints_left)
+
+        if races_left == 0:
+            st.info("La saison est terminée, il n'y a plus rien à simuler.")
+        else:
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Courses restantes", races_left)
+            col2.metric("Sprints restants", sprints_left)
+            col3.metric("Points max en jeu", max_left)
+
+            contenders = title_contenders(drivers, max_left)
+            still_in = contenders[contenders["can_win"]]
+
+            if len(still_in) == 1:
+                st.success(f"{still_in.iloc[0]['driver']} est déjà champion du monde !")
+            else:
+                st.info(f"{len(still_in)} pilotes peuvent encore être champions.")
+
+            leader_points = drivers["points"].max()
+            fig = px.bar(
+                still_in, x="driver", y="max_possible", color="team",
+                color_discrete_map=TEAM_COLORS, labels=LABELS,
+                title="Points maximum atteignables par les prétendants",
+            )
+            fig.add_hline(
+                y=leader_points, line_dash="dash",
+                annotation_text=f"Leader actuel : {leader_points:g} pts",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            display = contenders.copy()
+            display["can_win"] = display["can_win"].map({True: "Oui", False: "Non"})
+            st.dataframe(display.rename(columns=LABELS), hide_index=True)
