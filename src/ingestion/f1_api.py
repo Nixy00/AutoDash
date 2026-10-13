@@ -2,65 +2,77 @@ from datetime import date
 import pandas as pd
 import requests
 
-URL_BASE = "https://api.jolpi.ca/ergast/f1"
-LIMITE = 100
-
-def _valider_saison(saison: int) -> None:
-    if not isinstance(saison, int) or not 1950 <= saison <= date.today().year:
-        raise ValueError(f"Saison invalide : {saison}")
+BASE_URL = "https://api.jolpi.ca/ergast/f1"
+PAGE_LIMIT = 100
 
 
-def _recuperer_courses(url: str) -> list:
-    """Parcourt toutes les pages de l'API et renvoie la liste des courses."""
-    courses = []
+def check_season(season: int) -> None:
+    """Raise an error if the season is not a valid year."""
+    current_year = date.today().year
+    if not isinstance(season, int) or season < 1950 or season > current_year:
+        raise ValueError(f"Invalid season: {season}")
+
+
+def fetch_races(url: str) -> list:
+    """Download every page of an endpoint and return the list of races."""
+    races = []
     offset = 0
-    while True:
-        reponse = requests.get(
-            url, params={"limit": LIMITE, "offset": offset}, timeout=10
-        )
-        reponse.raise_for_status()
-        mrdata = reponse.json()["MRData"]
-        courses.extend(mrdata["RaceTable"]["Races"])
-        offset += LIMITE
-        if offset >= int(mrdata["total"]):
-            break
-    return courses
+    total = 1
+
+    while offset < total:
+        params = {"limit": PAGE_LIMIT, "offset": offset}
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()["MRData"]
+        races.extend(data["RaceTable"]["Races"])
+
+        total = int(data["total"])
+        offset += PAGE_LIMIT
+
+    return races
 
 
-def _aplatir(courses: list, cle: str, type_course: str) -> list:
-    """Transforme les courses imbriquées en une ligne par pilote et par course."""
-    lignes = []
-    for course in courses:
-        for r in course.get(cle, []):
-            position = r.get("position")
-            lignes.append({
-                "manche": int(course["round"]),
-                "course": course["raceName"],
-                "type": type_course,
-                "driver_id": r["Driver"]["driverId"],
-                "pilote": f"{r['Driver']['givenName']} {r['Driver']['familyName']}",
-                "ecurie": r["Constructor"]["name"],
-                "position_arrivee": int(position) if position else None,
-                "points": float(r.get("points", 0)),
-                "statut": r.get("status", ""),
-            })
-    return lignes
+def flatten_results(races: list, results_key: str, session: str) -> list:
+    """Turn the nested API data into one row per driver and per race."""
+    rows = []
+
+    for race in races:
+        for result in race.get(results_key, []):
+            driver = result["Driver"]
+            position = result.get("position")
+
+            row = {
+                "round": int(race["round"]),
+                "race": race["raceName"],
+                "session": session,
+                "driver_id": driver["driverId"],
+                "driver": f"{driver['givenName']} {driver['familyName']}",
+                "team": result["Constructor"]["name"],
+                "finish_position": int(position) if position else None,
+                "points": float(result.get("points", 0)),
+                "status": result.get("status", ""),
+            }
+            rows.append(row)
+
+    return rows
 
 
-def get_resultats_saison(saison: int) -> pd.DataFrame:
-    """Une ligne par pilote et par course (course principale + sprints)."""
-    _valider_saison(saison)
+def get_season_results(season: int) -> pd.DataFrame:
+    """One row per driver and per race, main races and sprints."""
+    check_season(season)
+
     try:
-        courses = _recuperer_courses(f"{URL_BASE}/{saison}/results/")
-        sprints = _recuperer_courses(f"{URL_BASE}/{saison}/sprint/")
-    except requests.RequestException as erreur:
-        print(f"Erreur réseau : {erreur}")
+        races = fetch_races(f"{BASE_URL}/{season}/results/")
+        sprints = fetch_races(f"{BASE_URL}/{season}/sprint/")
+    except requests.RequestException as error:
+        print(f"Network error: {error}")
         return pd.DataFrame()
 
-    lignes = _aplatir(courses, "Results", "Course")
-    lignes += _aplatir(sprints, "SprintResults", "Sprint")
-    return pd.DataFrame(lignes)
+    rows = flatten_results(races, "Results", "Race")
+    rows += flatten_results(sprints, "SprintResults", "Sprint")
+    return pd.DataFrame(rows)
 
 
 if __name__ == "__main__":
-    print(get_resultats_saison(2025).head())
+    print(get_season_results(2025).head())

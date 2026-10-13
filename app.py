@@ -1,10 +1,10 @@
 import plotly.express as px
 import streamlit as st
 
-from src.analysis.classements import classement_constructeurs, classement_pilotes
-from src.ingestion.f1_api import get_resultats_saison
+from src.analysis.standings import constructor_standings, driver_standings
+from src.ingestion.f1_api import get_season_results
 
-COULEURS_ECURIES = {
+TEAM_COLORS = {
     "Ferrari": "#E8002D",
     "McLaren": "#FF8000",
     "Red Bull": "#3671C6",
@@ -17,40 +17,52 @@ COULEURS_ECURIES = {
     "Haas F1 Team": "#B6BABD",
 }
 
+LABELS = {
+    "position": "Position",
+    "driver": "Pilote",
+    "team": "Écurie",
+    "points": "Points",
+    "wins": "Victoires",
+}
+
 st.set_page_config(page_title="AutoDash", layout="wide")
 st.title("AutoDash : F1")
 
 
 @st.cache_data(ttl=3600)
-def charger_resultats(saison: int):
-    return get_resultats_saison(saison)
+def load_results(season: int):
+    return get_season_results(season)
 
 
-saison = st.sidebar.selectbox("Saison", range(2025, 1949, -1))
-resultats = charger_resultats(saison)
+season = st.sidebar.selectbox("Saison", range(2025, 1949, -1))
+results = load_results(season)
 
-if resultats.empty:
-    st.warning(f"Aucune donnée disponible pour la saison {saison}.")
+if results.empty:
+    st.warning(f"Aucune donnée disponible pour la saison {season}.")
     st.stop()
 
-pilotes = classement_pilotes(resultats)
-constructeurs = classement_constructeurs(resultats, saison)
+drivers = driver_standings(results)
+teams = constructor_standings(results, season)
 
-onglet_pilotes, onglet_constructeurs = st.tabs(["Pilotes", "Constructeurs"])
+drivers_tab, teams_tab = st.tabs(["Pilotes", "Constructeurs"])
 
-with onglet_pilotes:
-    fig = px.bar(pilotes, x="pilote", y="points", color="ecurie",
-                 color_discrete_map=COULEURS_ECURIES,
-                 title=f"Points par pilote, saison {saison}")
+with drivers_tab:
+    fig = px.bar(
+        drivers, x="driver", y="points", color="team",
+        color_discrete_map=TEAM_COLORS, labels=LABELS,
+        title=f"Points par pilote, saison {season}",
+    )
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(pilotes, hide_index=True)
+    st.dataframe(drivers.rename(columns=LABELS), hide_index=True)
 
-with onglet_constructeurs:
-    if constructeurs.empty:
+with teams_tab:
+    if teams.empty:
         st.info("Pas de championnat constructeurs avant 1958.")
     else:
-        fig = px.bar(constructeurs, x="ecurie", y="points", color="ecurie",
-                     color_discrete_map=COULEURS_ECURIES,
-                     title=f"Points par écurie, saison {saison}")
+        fig = px.bar(
+            teams, x="team", y="points", color="team",
+            color_discrete_map=TEAM_COLORS, labels=LABELS,
+            title=f"Points par écurie, saison {season}",
+        )
         st.plotly_chart(fig, use_container_width=True)
-        st.dataframe(constructeurs, hide_index=True)
+        st.dataframe(teams.rename(columns=LABELS), hide_index=True)
