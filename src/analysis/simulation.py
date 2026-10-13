@@ -26,3 +26,17 @@ def remaining_events(results: pd.DataFrame, calendar: pd.DataFrame) -> tuple:
 def max_points_left(races_left: int, sprints_left: int) -> int:
     """Maximum points one driver can still score (wins everything)."""
     return races_left * RACE_POINTS[0] + sprints_left * SPRINT_POINTS[0]
+
+
+def title_contenders(standings: pd.DataFrame, max_left: int) -> pd.DataFrame:
+    """For each driver: gap to the leader, max reachable points, and if he can still win."""
+    if standings.empty:
+        return pd.DataFrame()
+
+    leader_points = standings["points"].max()
+
+    table = standings[["position", "driver", "team", "points"]].copy()
+    table["gap"] = leader_points - table["points"]
+    table["max_possible"] = table["points"] + max_left
+    table["can_win"] = table["max_possible"] >= leader_points
+    return table
