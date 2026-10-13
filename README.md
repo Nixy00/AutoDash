@@ -4,23 +4,36 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 
 > Statut : en développement. Pour l'instant, seule la Formule 1 est couverte. MotoGP, WRC, Formule E et WEC sont prévus.
 
-![Apercu du dashboard](docs/screenshot.png)
+![Aperçu du dashboard](docs/screenshot.png)
 
 ## Fonctionnalités
 
 - Sélecteur de saison, de 1950 à aujourd'hui
 - Classement pilotes : tous les points de la saison, avec l'écurie actuelle du pilote
-- Classement constructeurs : les points de chaque course vont à l'écurie attitrée
+- Classement constructeurs : les points de chaque course vont à l'écurie pour laquelle le pilote roulait ce jour-là
 - Courses sprint incluses
 - Couleurs officielles des écuries
-- Cache des appels API (1 heure)
+- Mise en cache des appels API (1 heure) pour accélérer l'affichage et limiter la charge sur l'API
 
 ## Stack
 
-Python 3.13, Streamlit, Plotly, pandas, requests.
+Python 3.10+, Streamlit, Plotly, pandas, requests.
 Données : [API Jolpica-F1](https://api.jolpi.ca/) (successeur d'Ergast).
 
 ## Installation
+
+### Linux / macOS
+
+Testé sur Ubuntu 22.04.
+
+```bash
+git clone https://github.com/Nixy00/AutoDash.git
+cd AutoDash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 -m streamlit run app.py
+```
 
 ### Windows (PowerShell)
 
@@ -31,17 +44,6 @@ py -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 py -m streamlit run app.py
-```
-
-### Linux / macOS
-
-```bash
-git clone https://github.com/Nixy00/AutoDash.git
-cd AutoDash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 -m streamlit run app.py
 ```
 
 L'application est ensuite disponible sur http://localhost:8501.
@@ -56,11 +58,13 @@ AutoDash/
     ├── ingestion/
     │   └── f1_api.py       # récupération des données (API, pagination)
     └── analysis/
-        └── classements.py  # calcul des classements
+        └── standings.py    # calcul des classements et statistiques
 ```
 
 Principe : `ingestion` récupère, `analysis` calcule, `app.py` affiche.
 Aucun de ces modules n'est mélangé avec les autres.
+
+Le code (variables, fonctions, commits) est écrit en anglais, l'interface est en français.
 
 ## Choix de calcul
 
@@ -75,6 +79,7 @@ Aucun de ces modules n'est mélangé avec les autres.
 Les totaux du classement constructeurs, calculés course par course (sprints inclus), ont été comparés à ceux de l'endpoint officiel `/constructorstandings/` de l'API Jolpica pour les saisons 2025, 2010 et 1990. Les résultats concordent.
 
 Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/constructorstandings/` et comparer avec l'onglet « Constructeurs » du dashboard.
+
 ## Feuille de route
 
 - [ ] Fiche pilote (évolution des points course par course)
