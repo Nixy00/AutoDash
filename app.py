@@ -1,3 +1,4 @@
+from datetime import date
 import plotly.express as px
 import streamlit as st
 
@@ -7,7 +8,7 @@ from src.analysis.standings import (
     driver_standings,
     driver_stats,
 )
-from src.ingestion.f1_api import get_season_results
+from src.ingestion.f1_api import get_season_calendar, get_season_results
 
 TEAM_COLORS = {
     "Ferrari": "#E8002D",
@@ -32,6 +33,7 @@ LABELS = {
     "cumulative_points": "Points cumulés",
 }
 
+CURRENT_YEAR = date.today().year
 st.set_page_config(page_title="AutoDash", layout="wide")
 st.title("AutoDash : F1")
 
@@ -41,12 +43,39 @@ def load_results(season: int):
     return get_season_results(season)
 
 
-season = st.sidebar.selectbox("Saison", range(2025, 1949, -1))
+@st.cache_data(ttl=3600)
+def load_calendar(season: int):
+    return get_season_calendar(season)
+
+season = st.sidebar.selectbox("Saison", range(CURRENT_YEAR, 1949, -1))
 results = load_results(season)
+calendar = load_calendar(season)
 
 if results.empty:
-    st.warning(f"Aucune donnée disponible pour la saison {season}.")
+    if season == CURRENT_YEAR and not calendar.empty:
+        first_race = calendar.iloc[0]
+        st.info(
+            f"La saison {season} n'a pas encore commencé. "
+            f"Première course : {first_race['race']} le {first_race['date']:%d/%m/%Y}."
+        )
+    else:
+        st.warning(f"Aucune donnée disponible pour la saison {season}.")
     st.stop()
+
+last_round = int(results["round"].max())
+last_race = results.loc[results["round"] == last_round, "race"].iloc[0]
+total_rounds = len(calendar)
+
+if calendar.empty:
+    st.caption(f"Résultats jusqu'à la manche {last_round} ({last_race}).")
+elif last_round < total_rounds:
+    next_race = calendar[calendar["round"] == last_round + 1].iloc[0]
+    st.info(
+        f"Saison en cours : après la manche {last_round} sur {total_rounds} ({last_race}). "
+        f"Prochaine course : {next_race['race']} le {next_race['date']:%d/%m/%Y}."
+    )
+else:
+    st.caption(f"Saison terminée : {total_rounds} manches.")
 
 drivers = driver_standings(results)
 teams = constructor_standings(results, season)
