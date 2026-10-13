@@ -14,6 +14,7 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 - Classement constructeurs : les points de chaque course vont à l'écurie pour laquelle le pilote roulait ce jour-là
 - Fiche pilote : évolution des points course par course et statistiques (victoires, podiums, abandons...)
 - Simulation : points encore en jeu et pilotes pouvant encore être champions
+- Scénario « Et si... ? » : choix du résultat des prétendants sur chaque course restante (position, DNF, DNS ou DSQ) et calcul du classement final
 - Courses sprint incluses
 - Couleurs officielles des écuries
 - Mise en cache des appels API (1 heure) pour accélérer l'affichage et limiter la charge sur l'API
@@ -79,6 +80,7 @@ Le code (variables, fonctions, commits) est écrit en anglais, l'interface est e
 - **Années 1950** : des pilotes partageaient parfois une voiture et les points étaient répartis, donc les totaux constructeurs sont moins fiables.
 - **Abandons** : un pilote est compté comme ayant abandonné s'il n'a ni terminé (même avec des tours de retard), ni été disqualifié, ni été non partant.
 - **Simulation** : barème actuel (25 points pour une victoire, 8 pour un sprint, pas de point de meilleur tour). Un pilote reste en course pour le titre tant que ses points plus le maximum restant atteignent au moins les points du leader. Disponible uniquement pour la saison en cours.
+- **Scénario « Et si... ? »** : l'utilisateur fixe le résultat des pilotes choisis sur les courses restantes (position, DNF, DNS ou DSQ). DNF, DNS et DSQ ne rapportent aucun point. Les autres pilotes ne marquent plus de points, et les égalités ne sont pas départagées.
 - **Données anciennes** : certains champs peuvent être absents, le code les gère sans planter.
 
 ## Vérification
@@ -94,7 +96,8 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - [x] Fiche pilote (évolution des points course par course)
 - [x] Gestion de la saison en cours
 - [x] Simulation : pilotes pouvant encore être champions
-- [ ] Simulation : hypothèses de l'utilisateur sur les courses restantes
+- [x] Simulation : hypothèses de l'utilisateur sur les courses restantes
+- [ ] Simulation aléatoire : probabilité de titre de chaque pilote
 - [ ] Détail des abandons dans la fiche pilote (manche, Grand Prix, cause)
 - [ ] Couleurs des nouvelles écuries (Audi, Cadillac)
 - [ ] Tests automatisés
@@ -106,6 +109,7 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 ## Sécurité
 
 - Validation de la saison avant tout appel API
+- Validation des saisies du scénario (positions limitées à une liste, doublons détectés)
 - Timeout sur les requêtes HTTP
 - Aucun secret dans le dépôt (`.env` ignoré par Git)
 
