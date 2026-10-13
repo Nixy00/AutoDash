@@ -34,10 +34,28 @@ def driver_standings(results: pd.DataFrame) -> pd.DataFrame:
     })
     standings["wins"] = standings["wins"].fillna(0).astype(int)
 
+    standings.index.name = "driver_id"
     standings = standings.sort_values(["points", "wins"], ascending=False)
-    standings = standings.reset_index(drop=True)
+    standings = standings.reset_index()
     standings.insert(0, "position", standings.index + 1)
     return standings
+
+
+def apply_official_points(standings: pd.DataFrame, official: pd.DataFrame) -> pd.DataFrame:
+    """Use the official position, points and wins (they include dropped scores)."""
+    if standings.empty or official.empty:
+        return standings
+
+    table = standings[["driver_id", "driver", "team"]]
+    table = table.merge(official, on="driver_id", how="left")
+
+    table["points"] = table["points"].fillna(0)
+    table["wins"] = table["wins"].fillna(0).astype(int)
+    table["position"] = table["position"].astype("Int64")
+
+    table = table.sort_values("position", na_position="last")
+    table = table[["position", "driver", "points", "wins", "team", "driver_id"]]
+    return table.reset_index(drop=True)
 
 
 def constructor_standings(results: pd.DataFrame, season: int) -> pd.DataFrame:
