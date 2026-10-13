@@ -8,9 +8,12 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 
 ## Fonctionnalités
 
-- Sélecteur de saison, de 1950 à aujourd'hui
-- Classement pilotes : tous les points de la saison, avec l'écurie actuelle du pilote
+- Sélecteur de saison, de 1950 à la saison en cours
+- Suivi de la saison en cours : dernière manche courue et prochaine course
+- Classement pilotes officiel, avec l'écurie actuelle du pilote
 - Classement constructeurs : les points de chaque course vont à l'écurie pour laquelle le pilote roulait ce jour-là
+- Fiche pilote : évolution des points course par course et statistiques (victoires, podiums, abandons...)
+- Simulation : points encore en jeu et pilotes pouvant encore être champions
 - Courses sprint incluses
 - Couleurs officielles des écuries
 - Mise en cache des appels API (1 heure) pour accélérer l'affichage et limiter la charge sur l'API
@@ -58,7 +61,8 @@ AutoDash/
     ├── ingestion/
     │   └── f1_api.py       # récupération des données (API, pagination)
     └── analysis/
-        └── standings.py    # calcul des classements et statistiques
+        ├── standings.py    # classements et statistiques
+        └── simulation.py   # simulation de fin de championnat
 ```
 
 Principe : `ingestion` récupère, `analysis` calcule, `app.py` affiche.
@@ -68,23 +72,32 @@ Le code (variables, fonctions, commits) est écrit en anglais, l'interface est e
 
 ## Choix de calcul
 
-- **Classement pilotes** : somme de tous les points du pilote sur la saison, y compris les sprints. L'écurie affichée est celle de sa dernière manche.
+- **Classement pilotes** : position, points et victoires officiels de l'API. L'écurie affichée est celle de la dernière manche du pilote.
+- **Avant 1991** : seuls les meilleurs résultats de chaque pilote comptaient pour le titre. Le classement utilise donc les points officiels, qui intègrent ces résultats retirés (par exemple Senna champion 1988 avec 90 points, devant Prost avec 87, alors que Prost en avait marqué 105 au total). La fiche pilote, elle, affiche tous les points marqués en piste.
 - **Classement constructeurs** : chaque résultat rapporte ses points à l'écurie pour laquelle le pilote roulait ce jour-là. Un pilote qui change d'équipe en cours d'année répartit donc ses points entre les deux.
 - **Avant 1958** : pas de championnat constructeurs, l'onglet est désactivé.
-- **Années 1950** : des pilotes partageaient parfois une voiture et les points étaient répartis, donc les totaux sont moins fiables.
+- **Années 1950** : des pilotes partageaient parfois une voiture et les points étaient répartis, donc les totaux constructeurs sont moins fiables.
+- **Abandons** : un pilote est compté comme ayant abandonné s'il n'a ni terminé (même avec des tours de retard), ni été disqualifié, ni été non partant.
+- **Simulation** : barème actuel (25 points pour une victoire, 8 pour un sprint, pas de point de meilleur tour). Un pilote reste en course pour le titre tant que ses points plus le maximum restant atteignent au moins les points du leader. Disponible uniquement pour la saison en cours.
 - **Données anciennes** : certains champs peuvent être absents, le code les gère sans planter.
 
 ## Vérification
 
 Les totaux du classement constructeurs, calculés course par course (sprints inclus), ont été comparés à ceux de l'endpoint officiel `/constructorstandings/` de l'API Jolpica pour les saisons 2025, 2010 et 1990. Les résultats concordent.
 
+Le cas des résultats retirés a été vérifié sur la saison 1988 (Senna champion devant Prost).
+
 Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/constructorstandings/` et comparer avec l'onglet « Constructeurs » du dashboard.
 
 ## Feuille de route
 
-- [X] Fiche pilote (évolution des points course par course)
-- [ ] Simulation de fin de championnat
-- [X] Gestion de la saison en cours
+- [x] Fiche pilote (évolution des points course par course)
+- [x] Gestion de la saison en cours
+- [x] Simulation : pilotes pouvant encore être champions
+- [ ] Simulation : hypothèses de l'utilisateur sur les courses restantes
+- [ ] Détail des abandons dans la fiche pilote (manche, Grand Prix, cause)
+- [ ] Couleurs des nouvelles écuries (Audi, Cadillac)
+- [ ] Tests automatisés
 - [ ] Docker et docker-compose
 - [ ] Stockage en base PostgreSQL
 - [ ] Autres disciplines : MotoGP, WRC, Formule E, WEC
