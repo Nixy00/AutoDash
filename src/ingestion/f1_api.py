@@ -42,6 +42,7 @@ def _aplatir(courses: list, cle: str, type_course: str) -> list:
                 "ecurie": r["Constructor"]["name"],
                 "position_arrivee": int(position) if position else None,
                 "points": float(r.get("points", 0)),
+                "statut": r.get("status", ""),
             })
     return lignes
 
