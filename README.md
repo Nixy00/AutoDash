@@ -82,7 +82,7 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 
 ## Feuille de route
 
-- [ ] Fiche pilote (évolution des points course par course)
+- [X] Fiche pilote (évolution des points course par course)
 - [ ] Simulation de fin de championnat
 - [ ] Gestion de la saison en cours
 - [ ] Docker et docker-compose
