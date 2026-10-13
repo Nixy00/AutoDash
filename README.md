@@ -84,7 +84,7 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 
 - [X] Fiche pilote (évolution des points course par course)
 - [ ] Simulation de fin de championnat
-- [ ] Gestion de la saison en cours
+- [X] Gestion de la saison en cours
 - [ ] Docker et docker-compose
 - [ ] Stockage en base PostgreSQL
 - [ ] Autres disciplines : MotoGP, WRC, Formule E, WEC
