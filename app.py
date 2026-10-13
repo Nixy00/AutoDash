@@ -1,8 +1,17 @@
 from datetime import date
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.analysis.simulation import max_points_left, remaining_events, title_contenders
+from src.analysis.simulation import (
+    POSITION_CHOICES,
+    apply_scenario,
+    check_scenario,
+    max_points_left,
+    remaining_event_list,
+    remaining_events,
+    title_contenders,
+)
 from src.analysis.standings import (
     apply_official_points,
     constructor_standings,
@@ -40,6 +49,8 @@ LABELS = {
     "gap": "Écart au leader",
     "max_possible": "Maximum atteignable",
     "can_win": "Encore en course",
+    "extra_points": "Points du scénario",
+    "final_points": "Total final",
 }
 
 CURRENT_YEAR = date.today().year
@@ -48,18 +59,18 @@ st.title("AutoDash : F1")
 
 
 @st.cache_data(ttl=3600)
-def load_results(season: int):
-    return get_season_results(season)
+def load_results(year: int):
+    return get_season_results(year)
 
 
 @st.cache_data(ttl=3600)
-def load_calendar(season: int):
-    return get_season_calendar(season)
+def load_calendar(year: int):
+    return get_season_calendar(year)
 
 
 @st.cache_data(ttl=3600)
-def load_official_standings(season: int):
-    return get_official_driver_standings(season)
+def load_official_standings(year: int):
+    return get_official_driver_standings(year)
 
 
 season = st.sidebar.selectbox("Saison", range(CURRENT_YEAR, 1949, -1))
@@ -196,3 +207,64 @@ with simulation_tab:
             display = contenders.copy()
             display["can_win"] = display["can_win"].map({True: "Oui", False: "Non"})
             st.dataframe(display.rename(columns=LABELS), hide_index=True)
+
+            if len(still_in) > 1:
+                st.subheader("Et si... ?")
+                st.caption(
+                    "Choisis le résultat des pilotes pour chaque course restante : "
+                    "une position, DNF (abandon), DNS (non partant) ou DSQ (disqualifié). "
+                    "Hypothèse : les autres pilotes ne marquent plus de points."
+                )
+
+                contender_names = still_in["driver"].tolist()
+                chosen = st.multiselect(
+                    "Pilotes du scénario",
+                    options=contender_names,
+                    default=contender_names[:2],
+                    key="scenario_drivers",
+                )
+
+                if len(chosen) < 2:
+                    st.info("Choisis au moins deux pilotes.")
+                else:
+                    grid = remaining_event_list(results, calendar)
+                    for i, name in enumerate(chosen):
+                        grid[name] = str(i + 1)
+
+                    column_config = {"event": st.column_config.TextColumn("Course")}
+                    for name in chosen:
+                        column_config[name] = st.column_config.SelectboxColumn(
+                            name, options=POSITION_CHOICES, required=True,
+                        )
+
+                    edited = pd.DataFrame(st.data_editor(
+                        grid,
+                        column_order=["event"] + chosen,
+                        column_config=column_config,
+                        disabled=["event"],
+                        hide_index=True,
+                    ))
+
+                    wrong_events = check_scenario(edited, chosen)
+                    if wrong_events:
+                        for event in wrong_events:
+                            st.error(f"{event} : deux pilotes ont la même position.")
+                    else:
+                        final = apply_scenario(drivers, edited, chosen)
+                        champion = final.iloc[0]
+                        st.success(
+                            f"Avec ce scénario, {champion['driver']} serait champion "
+                            f"avec {champion['final_points']:g} points."
+                        )
+
+                        top = final.head(10).rename(columns={
+                            "points": "Points actuels",
+                            "extra_points": "Points du scénario",
+                        })
+                        fig = px.bar(
+                            top, x="driver", y=["Points actuels", "Points du scénario"],
+                            labels={"driver": "Pilote", "value": "Points", "variable": ""},
+                            title="Classement final avec ce scénario (top 10)",
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                        st.dataframe(final.rename(columns=LABELS), hide_index=True)
