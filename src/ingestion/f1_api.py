@@ -100,3 +100,4 @@ def get_season_calendar(season: int) -> pd.DataFrame:
 
 if __name__ == "__main__":
     print(get_season_results(2025).head())
+    print(get_season_calendar(2026).head())
