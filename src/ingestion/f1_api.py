@@ -98,6 +98,47 @@ def get_season_calendar(season: int) -> pd.DataFrame:
         calendar["date"] = pd.to_datetime(calendar["date"])
     return calendar
 
+
+def get_official_driver_standings(season: int) -> pd.DataFrame:
+    """Official driver standings (with dropped scores before 1991)."""
+    check_season(season)
+    url = f"{BASE_URL}/{season}/driverstandings/"
+
+    rows = []
+    offset = 0
+    total = 1
+
+    try:
+        while offset < total:
+            params = {"limit": PAGE_LIMIT, "offset": offset}
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()["MRData"]
+            total = int(data["total"])
+            offset += PAGE_LIMIT
+
+            lists = data["StandingsTable"]["StandingsLists"]
+            if not lists:
+                break
+
+            for item in lists[0]["DriverStandings"]:
+                position = item.get("position")
+                row = {
+                    "driver_id": item["Driver"]["driverId"],
+                    "position": int(position) if position else None,
+                    "points": float(item.get("points", 0)),
+                    "wins": int(item.get("wins", 0)),
+                }
+                rows.append(row)
+    except requests.RequestException as error:
+        print(f"Network error: {error}")
+        return pd.DataFrame()
+
+    return pd.DataFrame(rows)
+
+
 if __name__ == "__main__":
     print(get_season_results(2025).head())
     print(get_season_calendar(2026).head())
+    print(get_official_driver_standings(1988).head(3))
