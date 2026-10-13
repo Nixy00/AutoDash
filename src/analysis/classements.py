@@ -41,3 +41,25 @@ def classement_constructeurs(resultats: pd.DataFrame, saison: int) -> pd.DataFra
     )
     df.insert(0, "position", df.index + 1)
     return df
+
+def points_cumules(resultats: pd.DataFrame) -> pd.DataFrame:
+    """Points cumulés de chaque pilote, manche après manche."""
+    if resultats.empty:
+        return pd.DataFrame(columns=["manche", "pilote", "points_cumules"])
+
+    par_manche = resultats.pivot_table(
+        index="manche",
+        columns="pilote",
+        values="points",
+        aggfunc="sum",
+        fill_value=0,
+    )
+
+    toutes_les_manches = range(1, int(par_manche.index.max()) + 1)
+    par_manche = par_manche.reindex(toutes_les_manches, fill_value=0).rename_axis("manche")
+
+    cumul = par_manche.cumsum()
+
+    return cumul.reset_index().melt(
+        id_vars="manche", var_name="pilote", value_name="points_cumules"
+    )
