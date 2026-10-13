@@ -73,6 +73,30 @@ def get_season_results(season: int) -> pd.DataFrame:
     rows += flatten_results(sprints, "SprintResults", "Sprint")
     return pd.DataFrame(rows)
 
+def get_season_calendar(season: int) -> pd.DataFrame:
+    """One row per race of the season, with its date and whether it has a sprint."""
+    check_season(season)
+
+    try:
+        races = fetch_races(f"{BASE_URL}/{season}/races/")
+    except requests.RequestException as error:
+        print(f"Network error: {error}")
+        return pd.DataFrame()
+
+    rows = []
+    for race in races:
+        row = {
+            "round": int(race["round"]),
+            "race": race["raceName"],
+            "date": race["date"],
+            "has_sprint": "Sprint" in race,
+        }
+        rows.append(row)
+
+    calendar = pd.DataFrame(rows)
+    if not calendar.empty:
+        calendar["date"] = pd.to_datetime(calendar["date"])
+    return calendar
 
 if __name__ == "__main__":
     print(get_season_results(2025).head())
