@@ -1,5 +1,7 @@
 # AutoDash
 
+   <img src="assets/logo.png" alt="Logo AutoDash" width="96">
+
 ![Tests](https://github.com/Nixy00/AutoDash/actions/workflows/tests.yml/badge.svg)
 
 Tableau de bord des statistiques du sport automobile, par saison et par course, avec simulation des dernières manches d'un championnat encore ouvert.

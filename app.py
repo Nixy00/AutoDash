@@ -19,42 +19,17 @@ from src.analysis.standings import (
     driver_standings,
     driver_stats,
 )
+from src.dashboard.theme import LABELS, TEAM_COLORS
 from src.ingestion.f1_api import (
     get_official_driver_standings,
     get_season_calendar,
     get_season_results,
 )
 
-TEAM_COLORS = {
-    "Ferrari": "#E8002D",
-    "McLaren": "#FF8000",
-    "Red Bull": "#3671C6",
-    "Mercedes": "#27F4D2",
-    "Aston Martin": "#229971",
-    "Alpine F1 Team": "#FF87BC",
-    "Williams": "#64C4FF",
-    "RB F1 Team": "#6692FF",
-    "Sauber": "#52E252",
-    "Haas F1 Team": "#B6BABD",
-}
-
-LABELS = {
-    "position": "Position",
-    "driver": "Pilote",
-    "team": "Écurie",
-    "points": "Points",
-    "wins": "Victoires",
-    "round": "Manche",
-    "cumulative_points": "Points cumulés",
-    "gap": "Écart au leader",
-    "max_possible": "Maximum atteignable",
-    "can_win": "Encore en course",
-    "extra_points": "Points du scénario",
-    "final_points": "Total final",
-}
-
 CURRENT_YEAR = date.today().year
-st.set_page_config(page_title="AutoDash", layout="wide")
+
+st.set_page_config(page_title="AutoDash", page_icon="assets/logo.png", layout="wide")
+st.logo("assets/logo.png")
 st.title("AutoDash : F1")
 
 
@@ -91,10 +66,11 @@ if results.empty:
 last_round = int(results["round"].max())
 last_race = results.loc[results["round"] == last_round, "race"].iloc[0]
 total_rounds = len(calendar)
+season_over = calendar.empty or last_round >= total_rounds
 
 if calendar.empty:
     st.caption(f"Résultats jusqu'à la manche {last_round} ({last_race}).")
-elif last_round < total_rounds:
+elif not season_over:
     next_race = calendar[calendar["round"] == last_round + 1].iloc[0]
     st.info(
         f"Saison en cours : après la manche {last_round} sur {total_rounds} ({last_race}). "
@@ -106,6 +82,22 @@ else:
 official = load_official_standings(season)
 drivers = apply_official_points(driver_standings(results), official)
 teams = constructor_standings(results, season)
+
+leader = drivers.iloc[0]
+col1, col2, col3, col4 = st.columns(4)
+
+if season_over:
+    col1.metric("Champion", leader["driver"])
+else:
+    col1.metric("Leader", leader["driver"])
+
+if len(drivers) > 1:
+    second = drivers.iloc[1]
+    gap = leader["points"] - second["points"]
+    col2.metric("Écart avec le 2e", f"{gap:g} pts", help=f"2e : {second['driver']}")
+
+col3.metric("Victoires du leader", int(leader["wins"]))
+col4.metric("Manches courues", last_round)
 
 drivers_tab, teams_tab, profile_tab, simulation_tab = st.tabs(
     ["Pilotes", "Constructeurs", "Fiche pilote", "Simulation"]
