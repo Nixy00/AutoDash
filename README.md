@@ -26,10 +26,35 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 
 ## Stack
 
-Python 3.10+, Streamlit, Plotly, pandas, requests, pytest.
+Python 3.10+, Streamlit, Plotly, pandas, requests, pytest, Docker.
 Données : [API Jolpica-F1](https://api.jolpi.ca/) (successeur d'Ergast).
 
-## Installation
+## Lancement avec Docker
+
+La méthode la plus simple : une seule commande, sans installer Python.
+
+```bash
+git clone https://github.com/Nixy00/AutoDash.git
+cd AutoDash
+docker compose up -d --build
+```
+
+L'application est disponible sur http://localhost:8501.
+
+| Commande | Effet |
+|---|---|
+| `docker compose up -d --build` | Construire l'image et lancer le conteneur |
+| `docker compose ps` | Voir l'état du conteneur |
+| `docker compose logs -f` | Afficher les logs |
+| `docker compose down` | Arrêter le conteneur |
+
+L'image utilise Python 3.13, tourne avec un utilisateur sans droits root, et Docker vérifie régulièrement que l'application répond. Le port n'est ouvert que sur la machine locale (`127.0.0.1`). Pour consulter le dashboard depuis un autre ordinateur, passer par un tunnel SSH :
+
+```bash
+ssh -N -L 8501:localhost:8501 utilisateur@adresse-du-serveur
+```
+
+## Installation sans Docker
 
 ### Linux / macOS
 
@@ -75,6 +100,9 @@ AutoDash/
 ├── app.py                  # interface Streamlit
 ├── requirements.txt        # dépendances de l'application
 ├── requirements-dev.txt    # dépendances de développement (pytest)
+├── Dockerfile              # recette de l'image Docker
+├── .dockerignore           # fichiers exclus de l'image
+├── docker-compose.yml      # lancement du conteneur
 ├── .streamlit/
 │   └── config.toml         # thème sombre du dashboard
 ├── .github/workflows/
@@ -125,10 +153,10 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - [x] Simulation : hypothèses de l'utilisateur sur les courses restantes
 - [x] Tests automatisés et intégration continue (GitHub Actions)
 - [x] Finitions visuelles : thème sombre, logo, chiffres clés
-- [ ] Docker et docker-compose
+- [x] Docker et docker-compose
+- [ ] Stockage en base PostgreSQL
 - [ ] Simulation aléatoire : probabilité de titre de chaque pilote
 - [ ] Détail des abandons dans la fiche pilote (manche, Grand Prix, cause)
-- [ ] Stockage en base PostgreSQL
 - [ ] Autres disciplines : MotoGP, WRC, Formule E, WEC
 - [ ] Version React + FastAPI
 
@@ -137,6 +165,7 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - Validation de la saison avant tout appel API
 - Validation des saisies du scénario (positions limitées à une liste, doublons détectés)
 - Timeout sur les requêtes HTTP
+- Conteneur exécuté sans droits root, port limité à la machine locale
 - Droits minimaux pour GitHub Actions (lecture seule du code)
 - Aucun secret dans le dépôt (`.env` ignoré par Git)
 
