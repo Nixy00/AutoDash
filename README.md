@@ -1,5 +1,7 @@
 # AutoDash
 
+![Tests](https://github.com/Nixy00/AutoDash/actions/workflows/tests.yml/badge.svg)
+
 Tableau de bord des statistiques du sport automobile, par saison et par course, avec simulation des dernières manches d'un championnat encore ouvert.
 
 > Statut : en développement. Pour l'instant, seule la Formule 1 est couverte. MotoGP, WRC, Formule E et WEC sont prévus.
