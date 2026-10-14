@@ -21,7 +21,7 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 
 ## Stack
 
-Python 3.10+, Streamlit, Plotly, pandas, requests.
+Python 3.10+, Streamlit, Plotly, pandas, requests, pytest.
 Données : [API Jolpica-F1](https://api.jolpi.ca/) (successeur d'Ergast).
 
 ## Installation
@@ -52,18 +52,31 @@ py -m streamlit run app.py
 
 L'application est ensuite disponible sur http://localhost:8501.
 
+## Tests
+
+Les calculs sont couverts par des tests automatisés, écrits sur de petites données inventées.
+
+```bash
+pip install -r requirements-dev.txt
+python3 -m pytest -v
+```
+
+Ils vérifient notamment les règles de calcul décrites plus bas : un sprint gagné n'est pas une victoire, les points constructeurs vont à l'écurie du jour, un pilote à un tour n'a pas abandonné, et les saisies invalides sont refusées.
+
 ## Structure du projet
 
 ```
 AutoDash/
 ├── app.py                  # interface Streamlit
-├── requirements.txt
-└── src/
-    ├── ingestion/
-    │   └── f1_api.py       # récupération des données (API, pagination)
-    └── analysis/
-        ├── standings.py    # classements et statistiques
-        └── simulation.py   # simulation de fin de championnat
+├── requirements.txt        # dépendances de l'application
+├── requirements-dev.txt    # dépendances de développement (pytest)
+├── src/
+│   ├── ingestion/
+│   │   └── f1_api.py       # récupération des données (API, pagination)
+│   └── analysis/
+│       ├── standings.py    # classements et statistiques
+│       └── simulation.py   # simulation de fin de championnat
+└── tests/                  # tests automatisés (pytest)
 ```
 
 Principe : `ingestion` récupère, `analysis` calcule, `app.py` affiche.
@@ -97,10 +110,10 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - [x] Gestion de la saison en cours
 - [x] Simulation : pilotes pouvant encore être champions
 - [x] Simulation : hypothèses de l'utilisateur sur les courses restantes
+- [x] Tests automatisés
 - [ ] Simulation aléatoire : probabilité de titre de chaque pilote
 - [ ] Détail des abandons dans la fiche pilote (manche, Grand Prix, cause)
 - [ ] Couleurs des nouvelles écuries (Audi, Cadillac)
-- [ ] Tests automatisés
 - [ ] Docker et docker-compose
 - [ ] Stockage en base PostgreSQL
 - [ ] Autres disciplines : MotoGP, WRC, Formule E, WEC
