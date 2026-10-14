@@ -1,6 +1,6 @@
 # AutoDash
 
-   <img src="assets/logo.png" alt="Logo AutoDash" width="96">
+<img src="assets/logo.png" alt="Logo AutoDash" width="96">
 
 ![Tests](https://github.com/Nixy00/AutoDash/actions/workflows/tests.yml/badge.svg)
 
@@ -14,13 +14,14 @@ Tableau de bord des statistiques du sport automobile, par saison et par course, 
 
 - Sélecteur de saison, de 1950 à la saison en cours
 - Suivi de la saison en cours : dernière manche courue et prochaine course
+- Chiffres clés en haut de page : leader (ou champion), écart avec le 2e, victoires et manches courues
 - Classement pilotes officiel, avec l'écurie actuelle du pilote
 - Classement constructeurs : les points de chaque course vont à l'écurie pour laquelle le pilote roulait ce jour-là
 - Fiche pilote : évolution des points course par course et statistiques (victoires, podiums, abandons...)
 - Simulation : points encore en jeu et pilotes pouvant encore être champions
 - Scénario « Et si... ? » : choix du résultat des prétendants sur chaque course restante (position, DNF, DNS ou DSQ) et calcul du classement final
 - Courses sprint incluses
-- Couleurs officielles des écuries
+- Thème sombre aux couleurs de la F1 et couleurs des écuries
 - Mise en cache des appels API (1 heure) pour accélérer l'affichage et limiter la charge sur l'API
 
 ## Stack
@@ -58,7 +59,7 @@ L'application est ensuite disponible sur http://localhost:8501.
 
 ## Tests
 
-Les calculs sont couverts par des tests automatisés, écrits sur de petites données inventées.
+Les calculs sont couverts par des tests automatisés, écrits sur de petites données inventées. Ils sont lancés automatiquement par GitHub Actions à chaque push, sur Python 3.10 et 3.13.
 
 ```bash
 pip install -r requirements-dev.txt
@@ -74,12 +75,20 @@ AutoDash/
 ├── app.py                  # interface Streamlit
 ├── requirements.txt        # dépendances de l'application
 ├── requirements-dev.txt    # dépendances de développement (pytest)
+├── .streamlit/
+│   └── config.toml         # thème sombre du dashboard
+├── .github/workflows/
+│   └── tests.yml           # tests automatiques (GitHub Actions)
+├── assets/                 # logo (SVG et PNG)
+├── docs/                   # capture d'écran du README
 ├── src/
 │   ├── ingestion/
 │   │   └── f1_api.py       # récupération des données (API, pagination)
-│   └── analysis/
-│       ├── standings.py    # classements et statistiques
-│       └── simulation.py   # simulation de fin de championnat
+│   ├── analysis/
+│   │   ├── standings.py    # classements et statistiques
+│   │   └── simulation.py   # simulation de fin de championnat
+│   └── dashboard/
+│       └── theme.py        # couleurs des écuries et libellés
 └── tests/                  # tests automatisés (pytest)
 ```
 
@@ -114,11 +123,11 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - [x] Gestion de la saison en cours
 - [x] Simulation : pilotes pouvant encore être champions
 - [x] Simulation : hypothèses de l'utilisateur sur les courses restantes
-- [x] Tests automatisés
+- [x] Tests automatisés et intégration continue (GitHub Actions)
+- [x] Finitions visuelles : thème sombre, logo, chiffres clés
+- [ ] Docker et docker-compose
 - [ ] Simulation aléatoire : probabilité de titre de chaque pilote
 - [ ] Détail des abandons dans la fiche pilote (manche, Grand Prix, cause)
-- [ ] Couleurs des nouvelles écuries (Audi, Cadillac)
-- [ ] Docker et docker-compose
 - [ ] Stockage en base PostgreSQL
 - [ ] Autres disciplines : MotoGP, WRC, Formule E, WEC
 - [ ] Version React + FastAPI
@@ -128,6 +137,7 @@ Pour refaire la vérification : ouvrir `https://api.jolpi.ca/ergast/f1/<saison>/
 - Validation de la saison avant tout appel API
 - Validation des saisies du scénario (positions limitées à une liste, doublons détectés)
 - Timeout sur les requêtes HTTP
+- Droits minimaux pour GitHub Actions (lecture seule du code)
 - Aucun secret dans le dépôt (`.env` ignoré par Git)
 
 ## Licence et données
